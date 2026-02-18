@@ -44,11 +44,13 @@ func init() {
 		os.RemoveAll(cachePath)
 		os.MkdirAll(cachePath, os.ModePerm)
 
-		Hooks.Register.Thumbnailer("video/mp4", &ffmpegThumbnail{})
-		Hooks.Register.Thumbnailer("video/x-matroska", &ffmpegThumbnail{})
-		Hooks.Register.Thumbnailer("video/x-msvideo", &ffmpegThumbnail{})
-	})
-}
+			Hooks.Register.Thumbnailer("video/mp4", &ffmpegThumbnail{})
+			Hooks.Register.Thumbnailer("video/x-matroska", &ffmpegThumbnail{})
+			Hooks.Register.Thumbnailer("video/x-msvideo", &ffmpegThumbnail{})
+			Hooks.Register.Thumbnailer("video/quicktime", &ffmpegThumbnail{})
+			Hooks.Register.Thumbnailer("video/webm", &ffmpegThumbnail{})
+		})
+	}
 
 type ffmpegThumbnail struct{}
 
