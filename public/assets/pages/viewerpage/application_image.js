@@ -42,6 +42,7 @@ export default function(render, { getFilename, getDownloadUrl, mime, hasMenubar 
 
     const $imgContainer = qs($page, ".images_wrapper");
     const $photo = qs($page, "img.photo");
+    enforceImageSizing($photo);
     const $menubar = qs($page, "component-menubar");
     const removeLoader = createLoader($imgContainer);
     const load$ = new rxjs.BehaviorSubject(null);
@@ -70,6 +71,7 @@ export default function(render, { getFilename, getDownloadUrl, mime, hasMenubar 
             }
             $photo.setAttribute("src", src);
             await onLoad($photo).toPromise();
+            enforceImageSizing($photo);
         }),
         rxjs.tap(() => load$.next($photo)),
         removeLoader,
@@ -108,6 +110,14 @@ export default function(render, { getFilename, getDownloadUrl, mime, hasMenubar 
             componentPagination(createRender(qs($page, "[data-bind=\"component_navigation\"]")), { $img: $photo });
         }),
     ));
+}
+
+function enforceImageSizing($img) {
+    $img.style.setProperty("width", "auto", "important");
+    $img.style.setProperty("height", "auto", "important");
+    $img.style.setProperty("object-fit", "contain", "important");
+    $img.style.setProperty("max-width", "calc(100% - 20px)", "important");
+    $img.style.setProperty("max-height", "calc(100% - 20px)", "important");
 }
 
 export function init() {
