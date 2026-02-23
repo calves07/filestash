@@ -32,15 +32,15 @@ jobs:
         repeat: [1, 2, 3]
     steps:
       - name: Checkout
-        if: ${{ matrix.repeat <= fromJSON(inputs.repeats) }}
+        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        if: ${{ matrix.repeat <= fromJSON(inputs.repeats) }}
+        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: docker/setup-buildx-action@v3
 
       - name: Benchmark no-cache build
-        if: ${{ matrix.repeat <= fromJSON(inputs.repeats) }}
+        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -87,7 +87,7 @@ PY
           JSON
 
       - name: Upload no-cache result
-        if: ${{ matrix.repeat <= fromJSON(inputs.repeats) }}
+        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: actions/upload-artifact@v4
         with:
           name: bench-result-no-cache-${{ matrix.runner }}-r${{ matrix.repeat }}
@@ -109,15 +109,15 @@ PY
         repeat: [1, 2, 3]
     steps:
       - name: Checkout
-        if: ${{ matrix.repeat <= fromJSON(inputs.repeats) }}
+        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        if: ${{ matrix.repeat <= fromJSON(inputs.repeats) }}
+        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: docker/setup-buildx-action@v3
 
       - name: Populate GHA cache (baseline)
-        if: ${{ matrix.repeat <= fromJSON(inputs.repeats) }}
+        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -167,7 +167,7 @@ PY
           JSON
 
       - name: Upload cache-populate result
-        if: ${{ matrix.repeat <= fromJSON(inputs.repeats) }}
+        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: actions/upload-artifact@v4
         with:
           name: bench-result-cache-populate-${{ matrix.runner }}-r${{ matrix.repeat }}
@@ -190,15 +190,15 @@ PY
         repeat: [1, 2, 3]
     steps:
       - name: Checkout
-        if: ${{ matrix.repeat <= fromJSON(inputs.repeats) }}
+        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        if: ${{ matrix.repeat <= fromJSON(inputs.repeats) }}
+        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: docker/setup-buildx-action@v3
 
       - name: Benchmark warm cache build
-        if: ${{ matrix.repeat <= fromJSON(inputs.repeats) }}
+        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -248,7 +248,7 @@ PY
           JSON
 
       - name: Upload cache-warm result
-        if: ${{ matrix.repeat <= fromJSON(inputs.repeats) }}
+        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: actions/upload-artifact@v4
         with:
           name: bench-result-cache-warm-${{ matrix.runner }}-r${{ matrix.repeat }}
