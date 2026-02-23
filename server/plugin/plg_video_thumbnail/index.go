@@ -17,6 +17,16 @@ const (
 	VideoCachePath = "data/cache/video-thumbnail/"
 )
 
+var supportedVideoThumbnailMIMETypes = []string{
+	"video/mp4",
+	"video/x-matroska",
+	"video/x-msvideo",
+	"video/quicktime",
+	"video/webm",
+	"video/x-m4v",
+	"video/m4v",
+}
+
 var plugin_enable = func() bool {
 	return Config.Get("features.video.enable_thumbnail").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
@@ -44,13 +54,11 @@ func init() {
 		os.RemoveAll(cachePath)
 		os.MkdirAll(cachePath, os.ModePerm)
 
-		Hooks.Register.Thumbnailer("video/mp4", &ffmpegThumbnail{})
-		Hooks.Register.Thumbnailer("video/x-matroska", &ffmpegThumbnail{})
-		Hooks.Register.Thumbnailer("video/x-msvideo", &ffmpegThumbnail{})
-		Hooks.Register.Thumbnailer("video/quicktime", &ffmpegThumbnail{})
-		Hooks.Register.Thumbnailer("video/webm", &ffmpegThumbnail{})
-		})
-	}
+		for _, mimeType := range supportedVideoThumbnailMIMETypes {
+			Hooks.Register.Thumbnailer(mimeType, &ffmpegThumbnail{})
+		}
+	})
+}
 
 type ffmpegThumbnail struct{}
 

@@ -50,6 +50,7 @@ const $tmpl = createElement(`
         </span>
         <span class="component_datetime"></span>
         <div class="component_action"></div>
+        <div class="media_kind_badge" aria-hidden="true"></div>
         <div class="selectionOverlay"></div>
     </a>
 `);
@@ -85,6 +86,7 @@ export function createThing({
     const $extension = $thing.children[2].firstElementChild; // = qs($thing, ".info_extension > span");
     const $label = $thing.children[3].firstElementChild.firstElementChild; // = qs($thing, ".component_filename .file-details > span");
     const $time = $thing.children[4]; // = qs($thing, ".component_datetime");
+    const $mediaKindBadge = $thing.children[6]; // = qs($thing, ".media_kind_badge");
 
     $link.setAttribute("href", link);
     if (location.search) $link.setAttribute("href", forwardURLParams(link, ["share", "canary"]));
@@ -105,6 +107,9 @@ export function createThing({
         $label.appendChild($filesize);
     }
     if (mime && view === "grid" && TYPES.THUMBNAILER.has(mime) && offline === false) {
+        const mediaKind = mime.startsWith("video/") ? "video" : "image";
+        $thing.setAttribute("data-media-kind", mediaKind);
+        $mediaKindBadge.style.display = mediaKind === "video" ? "flex" : "none";
         $extension.style.display = "none";
         $img.classList.add("thumbnail");
         const $placeholder = $img.cloneNode(true);
