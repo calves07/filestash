@@ -50,5 +50,6 @@ jobs:
           build-args: |
             GIT_REPO=https://github.com/${{ github.repository }}
             GIT_BRANCH=${{ github.ref_name }}
+            GIT_SHA=${{ github.sha }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

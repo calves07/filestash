@@ -3,7 +3,11 @@ FROM alpine/git as builder_prepare
 WORKDIR /home/
 ARG GIT_REPO=https://github.com/mickael-kerjean/filestash
 ARG GIT_BRANCH=master
-RUN git clone --depth 1 --single-branch --branch ${GIT_BRANCH} ${GIT_REPO}
+ARG GIT_SHA=HEAD
+RUN git clone --depth 1 --single-branch --branch ${GIT_BRANCH} ${GIT_REPO} && \
+    cd filestash && \
+    git fetch --depth 1 origin ${GIT_SHA} && \
+    git checkout --detach ${GIT_SHA}
 
 # STEP2: BUILD BACKEND
 FROM golang:1.24-trixie AS builder_backend
