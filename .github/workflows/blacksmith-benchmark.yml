@@ -65,13 +65,7 @@ jobs:
             .
           end_ns="$(date +%s%N)"
 
-          duration_s="$(python3 - <<'PY' "$start_ns" "$end_ns"
-import sys
-start = int(sys.argv[1])
-end = int(sys.argv[2])
-print(f"{(end - start) / 1_000_000_000:.3f}")
-PY
-)"
+          duration_s="$(awk -v start="${start_ns}" -v end="${end_ns}" 'BEGIN { printf "%.3f", (end - start) / 1000000000 }')"
 
           cat > "${out_file}" <<JSON
           {
@@ -144,13 +138,7 @@ PY
             .
           end_ns="$(date +%s%N)"
 
-          duration_s="$(python3 - <<'PY' "$start_ns" "$end_ns"
-import sys
-start = int(sys.argv[1])
-end = int(sys.argv[2])
-print(f"{(end - start) / 1_000_000_000:.3f}")
-PY
-)"
+          duration_s="$(awk -v start="${start_ns}" -v end="${end_ns}" 'BEGIN { printf "%.3f", (end - start) / 1000000000 }')"
 
           cat > "${out_file}" <<JSON
           {
@@ -225,13 +213,7 @@ PY
             .
           end_ns="$(date +%s%N)"
 
-          duration_s="$(python3 - <<'PY' "$start_ns" "$end_ns"
-import sys
-start = int(sys.argv[1])
-end = int(sys.argv[2])
-print(f"{(end - start) / 1_000_000_000:.3f}")
-PY
-)"
+          duration_s="$(awk -v start="${start_ns}" -v end="${end_ns}" 'BEGIN { printf "%.3f", (end - start) / 1000000000 }')"
 
           cat > "${out_file}" <<JSON
           {
@@ -274,78 +256,76 @@ PY
           set -euo pipefail
 
           python3 - <<'PY'
-import json
-import statistics
-from pathlib import Path
+          import json
+          import statistics
+          from pathlib import Path
 
-result_files = sorted(Path("bench-results").glob("*.json"))
-if not result_files:
-    raise SystemExit("No benchmark result files found")
+          result_files = sorted(Path("bench-results").glob("*.json"))
+          if not result_files:
+              raise SystemExit("No benchmark result files found")
 
-rows = []
-for fp in result_files:
-    with fp.open() as f:
-        rows.append(json.load(f))
+          rows = []
+          for fp in result_files:
+              with fp.open() as f:
+                  rows.append(json.load(f))
 
-phases = ["no_cache", "cache_populate", "cache_warm"]
-runners = [
-    "ubuntu-latest",
-    "blacksmith-2vcpu-ubuntu-2404",
-    "blacksmith-4vcpu-ubuntu-2404",
-    "blacksmith-8vcpu-ubuntu-2404",
-]
+          phases = ["no_cache", "cache_populate", "cache_warm"]
+          runners = [
+              "ubuntu-latest",
+              "blacksmith-2vcpu-ubuntu-2404",
+              "blacksmith-4vcpu-ubuntu-2404",
+              "blacksmith-8vcpu-ubuntu-2404",
+          ]
 
-by_key = {}
-for r in rows:
-    by_key.setdefault((r["phase"], r["runner"]), []).append(r["duration_seconds"])
+          by_key = {}
+          for r in rows:
+              by_key.setdefault((r["phase"], r["runner"]), []).append(r["duration_seconds"])
 
-summary_lines = []
-summary_lines.append("## Docker build benchmark summary")
-summary_lines.append("")
-summary_lines.append("| Phase | Runner | N | Avg (s) | Median (s) | Min (s) | Max (s) |")
-summary_lines.append("|---|---|---:|---:|---:|---:|---:|")
+          summary_lines = []
+          summary_lines.append("## Docker build benchmark summary")
+          summary_lines.append("")
+          summary_lines.append("| Phase | Runner | N | Avg (s) | Median (s) | Min (s) | Max (s) |")
+          summary_lines.append("|---|---|---:|---:|---:|---:|---:|")
 
-for phase in phases:
-    for runner in runners:
-        vals = by_key.get((phase, runner), [])
-        if not vals:
-            continue
-        summary_lines.append(
-            f"| {phase} | {runner} | {len(vals)} | {statistics.mean(vals):.3f} | {statistics.median(vals):.3f} | {min(vals):.3f} | {max(vals):.3f} |"
-        )
+          for phase in phases:
+              for runner in runners:
+                  vals = by_key.get((phase, runner), [])
+                  if not vals:
+                      continue
+                  summary_lines.append(
+                      f"| {phase} | {runner} | {len(vals)} | {statistics.mean(vals):.3f} | {statistics.median(vals):.3f} | {min(vals):.3f} | {max(vals):.3f} |"
+                  )
 
-# Speedup table against ubuntu-latest per phase using median
-summary_lines.append("")
-summary_lines.append("| Phase | Runner | Median speedup vs ubuntu-latest |")
-summary_lines.append("|---|---|---:|")
-for phase in phases:
-    base = by_key.get((phase, "ubuntu-latest"), [])
-    if not base:
-        continue
-    base_median = statistics.median(base)
-    for runner in runners:
-        vals = by_key.get((phase, runner), [])
-        if not vals:
-            continue
-        med = statistics.median(vals)
-        speedup = base_median / med if med else 0.0
-        summary_lines.append(f"| {phase} | {runner} | {speedup:.2f}x |")
+          summary_lines.append("")
+          summary_lines.append("| Phase | Runner | Median speedup vs ubuntu-latest |")
+          summary_lines.append("|---|---|---:|")
+          for phase in phases:
+              base = by_key.get((phase, "ubuntu-latest"), [])
+              if not base:
+                  continue
+              base_median = statistics.median(base)
+              for runner in runners:
+                  vals = by_key.get((phase, runner), [])
+                  if not vals:
+                      continue
+                  med = statistics.median(vals)
+                  speedup = base_median / med if med else 0.0
+                  summary_lines.append(f"| {phase} | {runner} | {speedup:.2f}x |")
 
-# runner metadata snapshot
-summary_lines.append("")
-summary_lines.append("### Runner metadata samples")
-summary_lines.append("")
-summary_lines.append("| Phase | Runner | Repeat | nproc | CPU model | Duration (s) |")
-summary_lines.append("|---|---|---:|---:|---|---:|")
-for r in sorted(rows, key=lambda x: (x["phase"], x["runner"], x["repeat"])):
-    summary_lines.append(
-        f"| {r['phase']} | {r['runner']} | {r['repeat']} | {r.get('nproc','')} | {r.get('cpu_model','')} | {r['duration_seconds']:.3f} |"
-    )
+          summary_lines.append("")
+          summary_lines.append("### Runner metadata samples")
+          summary_lines.append("")
+          summary_lines.append("| Phase | Runner | Repeat | nproc | CPU model | Duration (s) |")
+          summary_lines.append("|---|---|---:|---:|---|---:|")
+          for r in sorted(rows, key=lambda x: (x["phase"], x["runner"], x["repeat"])):
+              summary_lines.append(
+                  f"| {r['phase']} | {r['runner']} | {r['repeat']} | {r.get('nproc','')} | {r.get('cpu_model','')} | {r['duration_seconds']:.3f} |"
+              )
 
-text = "\n".join(summary_lines) + "\n"
-Path("benchmark-summary.md").write_text(text)
-print(text)
-PY
+          text = "\n".join(summary_lines) + "\n"
+          Path("benchmark-summary.md").write_text(text)
+          print(text)
+          PY
 
           cat benchmark-summary.md >> "$GITHUB_STEP_SUMMARY"
 
