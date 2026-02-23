@@ -32,15 +32,12 @@ jobs:
         repeat: [1, 2, 3]
     steps:
       - name: Checkout
-        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: docker/setup-buildx-action@v3
 
       - name: Benchmark no-cache build
-        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -54,6 +51,22 @@ jobs:
 
           cpu_model="$(lscpu | awk -F: '/Model name/{gsub(/^ +/,"",$2); print $2; exit}')"
           nproc_count="$(nproc)"
+          target_repeats="${{ github.event.inputs.repeats }}"
+          target_repeats="${target_repeats:-1}"
+
+          if [ "${repeat}" -gt "${target_repeats}" ]; then
+            jq -n \
+              --arg phase "no_cache" \
+              --arg runner "${{ matrix.runner }}" \
+              --argjson repeat "${repeat}" \
+              --argjson skipped true \
+              --arg skip_reason "repeat_out_of_range" \
+              --argjson target_repeats "${target_repeats}" \
+              --arg run_id "${{ github.run_id }}" \
+              --arg sha "${{ github.sha }}" \
+              '{phase:$phase, runner:$runner, repeat:$repeat, skipped:$skipped, skip_reason:$skip_reason, target_repeats:$target_repeats, run_id:$run_id, sha:$sha}' > "${out_file}"
+            exit 0
+          fi
 
           start_ns="$(date +%s%N)"
           docker buildx build \
@@ -67,21 +80,18 @@ jobs:
 
           duration_s="$(awk -v start="${start_ns}" -v end="${end_ns}" 'BEGIN { printf "%.3f", (end - start) / 1000000000 }')"
 
-          cat > "${out_file}" <<JSON
-          {
-            "phase": "no_cache",
-            "runner": "${{ matrix.runner }}",
-            "repeat": ${repeat},
-            "duration_seconds": ${duration_s},
-            "nproc": ${nproc_count},
-            "cpu_model": "${cpu_model}",
-            "run_id": "${{ github.run_id }}",
-            "sha": "${{ github.sha }}"
-          }
-          JSON
+          jq -n \
+            --arg phase "no_cache" \
+            --arg runner "${{ matrix.runner }}" \
+            --argjson repeat "${repeat}" \
+            --argjson duration_seconds "${duration_s}" \
+            --argjson nproc "${nproc_count}" \
+            --arg cpu_model "${cpu_model}" \
+            --arg run_id "${{ github.run_id }}" \
+            --arg sha "${{ github.sha }}" \
+            '{phase:$phase, runner:$runner, repeat:$repeat, duration_seconds:$duration_seconds, nproc:$nproc, cpu_model:$cpu_model, run_id:$run_id, sha:$sha}' > "${out_file}"
 
       - name: Upload no-cache result
-        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: actions/upload-artifact@v4
         with:
           name: bench-result-no-cache-${{ matrix.runner }}-r${{ matrix.repeat }}
@@ -103,15 +113,12 @@ jobs:
         repeat: [1, 2, 3]
     steps:
       - name: Checkout
-        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: docker/setup-buildx-action@v3
 
       - name: Populate GHA cache (baseline)
-        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -126,6 +133,23 @@ jobs:
 
           cpu_model="$(lscpu | awk -F: '/Model name/{gsub(/^ +/,"",$2); print $2; exit}')"
           nproc_count="$(nproc)"
+          target_repeats="${{ github.event.inputs.repeats }}"
+          target_repeats="${target_repeats:-1}"
+
+          if [ "${repeat}" -gt "${target_repeats}" ]; then
+            jq -n \
+              --arg phase "cache_populate" \
+              --arg runner "${{ matrix.runner }}" \
+              --argjson repeat "${repeat}" \
+              --arg cache_scope "${scope}" \
+              --argjson skipped true \
+              --arg skip_reason "repeat_out_of_range" \
+              --argjson target_repeats "${target_repeats}" \
+              --arg run_id "${{ github.run_id }}" \
+              --arg sha "${{ github.sha }}" \
+              '{phase:$phase, runner:$runner, repeat:$repeat, cache_scope:$cache_scope, skipped:$skipped, skip_reason:$skip_reason, target_repeats:$target_repeats, run_id:$run_id, sha:$sha}' > "${out_file}"
+            exit 0
+          fi
 
           start_ns="$(date +%s%N)"
           docker buildx build \
@@ -140,22 +164,19 @@ jobs:
 
           duration_s="$(awk -v start="${start_ns}" -v end="${end_ns}" 'BEGIN { printf "%.3f", (end - start) / 1000000000 }')"
 
-          cat > "${out_file}" <<JSON
-          {
-            "phase": "cache_populate",
-            "runner": "${{ matrix.runner }}",
-            "repeat": ${repeat},
-            "duration_seconds": ${duration_s},
-            "cache_scope": "${scope}",
-            "nproc": ${nproc_count},
-            "cpu_model": "${cpu_model}",
-            "run_id": "${{ github.run_id }}",
-            "sha": "${{ github.sha }}"
-          }
-          JSON
+          jq -n \
+            --arg phase "cache_populate" \
+            --arg runner "${{ matrix.runner }}" \
+            --argjson repeat "${repeat}" \
+            --argjson duration_seconds "${duration_s}" \
+            --arg cache_scope "${scope}" \
+            --argjson nproc "${nproc_count}" \
+            --arg cpu_model "${cpu_model}" \
+            --arg run_id "${{ github.run_id }}" \
+            --arg sha "${{ github.sha }}" \
+            '{phase:$phase, runner:$runner, repeat:$repeat, duration_seconds:$duration_seconds, cache_scope:$cache_scope, nproc:$nproc, cpu_model:$cpu_model, run_id:$run_id, sha:$sha}' > "${out_file}"
 
       - name: Upload cache-populate result
-        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: actions/upload-artifact@v4
         with:
           name: bench-result-cache-populate-${{ matrix.runner }}-r${{ matrix.repeat }}
@@ -178,15 +199,12 @@ jobs:
         repeat: [1, 2, 3]
     steps:
       - name: Checkout
-        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: docker/setup-buildx-action@v3
 
       - name: Benchmark warm cache build
-        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -201,6 +219,23 @@ jobs:
 
           cpu_model="$(lscpu | awk -F: '/Model name/{gsub(/^ +/,"",$2); print $2; exit}')"
           nproc_count="$(nproc)"
+          target_repeats="${{ github.event.inputs.repeats }}"
+          target_repeats="${target_repeats:-1}"
+
+          if [ "${repeat}" -gt "${target_repeats}" ]; then
+            jq -n \
+              --arg phase "cache_warm" \
+              --arg runner "${{ matrix.runner }}" \
+              --argjson repeat "${repeat}" \
+              --arg cache_scope "${scope}" \
+              --argjson skipped true \
+              --arg skip_reason "repeat_out_of_range" \
+              --argjson target_repeats "${target_repeats}" \
+              --arg run_id "${{ github.run_id }}" \
+              --arg sha "${{ github.sha }}" \
+              '{phase:$phase, runner:$runner, repeat:$repeat, cache_scope:$cache_scope, skipped:$skipped, skip_reason:$skip_reason, target_repeats:$target_repeats, run_id:$run_id, sha:$sha}' > "${out_file}"
+            exit 0
+          fi
 
           start_ns="$(date +%s%N)"
           docker buildx build \
@@ -215,22 +250,19 @@ jobs:
 
           duration_s="$(awk -v start="${start_ns}" -v end="${end_ns}" 'BEGIN { printf "%.3f", (end - start) / 1000000000 }')"
 
-          cat > "${out_file}" <<JSON
-          {
-            "phase": "cache_warm",
-            "runner": "${{ matrix.runner }}",
-            "repeat": ${repeat},
-            "duration_seconds": ${duration_s},
-            "cache_scope": "${scope}",
-            "nproc": ${nproc_count},
-            "cpu_model": "${cpu_model}",
-            "run_id": "${{ github.run_id }}",
-            "sha": "${{ github.sha }}"
-          }
-          JSON
+          jq -n \
+            --arg phase "cache_warm" \
+            --arg runner "${{ matrix.runner }}" \
+            --argjson repeat "${repeat}" \
+            --argjson duration_seconds "${duration_s}" \
+            --arg cache_scope "${scope}" \
+            --argjson nproc "${nproc_count}" \
+            --arg cpu_model "${cpu_model}" \
+            --arg run_id "${{ github.run_id }}" \
+            --arg sha "${{ github.sha }}" \
+            '{phase:$phase, runner:$runner, repeat:$repeat, duration_seconds:$duration_seconds, cache_scope:$cache_scope, nproc:$nproc, cpu_model:$cpu_model, run_id:$run_id, sha:$sha}' > "${out_file}"
 
       - name: Upload cache-warm result
-        if: ${{ matrix.repeat <= fromJSON(github.event.inputs.repeats || '1') }}
         uses: actions/upload-artifact@v4
         with:
           name: bench-result-cache-warm-${{ matrix.runner }}-r${{ matrix.repeat }}
@@ -268,6 +300,10 @@ jobs:
           for fp in result_files:
               with fp.open() as f:
                   rows.append(json.load(f))
+
+          rows = [r for r in rows if not r.get("skipped") and isinstance(r.get("duration_seconds"), (int, float))]
+          if not rows:
+              raise SystemExit("No benchmark rows with duration data found")
 
           phases = ["no_cache", "cache_populate", "cache_warm"]
           runners = [
